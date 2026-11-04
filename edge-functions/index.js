@@ -180,18 +180,26 @@ export async function onRequest(context) {
     }
     ctx.config = config
     try {
+        console.log('1')
         ctx.link = await getUGreenLink(ctx)
+        console.log('2')
         ctx.publicKey = await getPublicKey(ctx)
+        console.log('3')
         ctx.password = await getPassword(ctx)
+        console.log('4')
         const loginInfo = await login(ctx)
+        console.log('5')
         ctx.token = loginInfo.token
         ctx.dockerToken = await getDockerToken(ctx)
+        console.log('6')
         const proxyInfo = await getProxyInfo(ctx)
+        console.log('7')
         ctx.proxyOrigin = proxyInfo.origin
         ctx.proxyToken = proxyInfo.token
+        console.log('8')
         const response = await proxy(request, ctx.proxyOrigin, ctx.proxyToken)
         response.headers.set('x-edge-kv', 'miss')
-        await Database.setObject(key, {origin: ctx.proxyOrigin, token: ctx.proxyToken})
+        // await Database.setObject(key, {origin: ctx.proxyOrigin, token: ctx.proxyToken})
         return response
     } catch (error) {
         console.log('error', error)
