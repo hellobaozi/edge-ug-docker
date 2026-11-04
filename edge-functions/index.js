@@ -203,7 +203,7 @@ export async function onRequest(context) {
         return response
     } catch (error) {
         console.log('error', error)
-        return new Response('访问出错。。。。。。'+error, {status: 500})
+        return new Response('访问出错鸟。。。。。。'+error, {status: 404})
     }
 }
 
