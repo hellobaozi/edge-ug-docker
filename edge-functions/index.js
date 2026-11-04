@@ -119,8 +119,21 @@ const getProxyInfo = async ctx => {
         redirect: 'manual',
     })
     const origin = new URL(ctx.dockerToken).origin
+
     const cookieObject = CookieHelper.getSetCookieObject(response)
-    const token = cookieObject['ugreen-proxy-token']
+    let token = cookieObject['ugreen-proxy-token']
+
+    // 绿联目前通过认证页脚本写入 cookie，而不是返回 Set-Cookie 响应头。
+    if (!token) {
+        const html = await response.text()
+        const match = html.match(/ugreen-proxy-token=([^;'"\s<]+)/)
+        token = match?.[1]
+    }
+
+    if (!token) {
+        throw new Error('没有获取到绿联代理 token')
+    }
+
     return {origin, token}
 }
 
@@ -180,30 +193,26 @@ export async function onRequest(context) {
     }
     ctx.config = config
     try {
-        console.log('1')
         ctx.link = await getUGreenLink(ctx)
-        console.log('2')
         ctx.publicKey = await getPublicKey(ctx)
-        console.log('3')
         ctx.password = await getPassword(ctx)
-        console.log('4')
         const loginInfo = await login(ctx)
-        console.log('5')
         ctx.token = loginInfo.token
         ctx.dockerToken = await getDockerToken(ctx)
-        console.log('6')
         const proxyInfo = await getProxyInfo(ctx)
-        console.log('7')
         ctx.proxyOrigin = proxyInfo.origin
         ctx.proxyToken = proxyInfo.token
-        console.log('8')
         const response = await proxy(request, ctx.proxyOrigin, ctx.proxyToken)
         response.headers.set('x-edge-kv', 'miss')
-        // await Database.setObject(key, {origin: ctx.proxyOrigin, token: ctx.proxyToken})
+        try {
+            await Database.setObject(key, {origin: ctx.proxyOrigin, token: ctx.proxyToken})
+        } catch (error) {
+            console.log('缓存访问出错')
+        }
         return response
     } catch (error) {
         console.log('error', error)
-        return new Response('访问出错鸟。。。。。。'+error, {status: 404})
+        return new Response('访问出错', {status: 404})
     }
 }
 
